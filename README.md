@@ -30,7 +30,7 @@ A library: it has no `main` and registers no rules.
   and tell of the growth (its `city:grow` event, say) as for any growth, with `cause` as the reason. Whatever those
   rules do to the food store (empty it, half-fill it) is then undone.
 
-`dependencies` are `{ cityGrowthRegistry?, cityImprovementRegistry? }`. `options`:
+`dependencies` are `{ cityGrowthRegistry?, cityImprovementRegistry?, turn? }`. `options`:
 
 - `FoodType` (required): the city's food yield. Its total in the city's yields, net of what the city's citizens and
   units eat (the city's `Cost` rules), must be above 0.
@@ -45,6 +45,16 @@ A library: it has no `main` and registers no rules.
 
 A city that starts celebrating only has its celebration recorded; it grows from the next turn on, for as long as the
 celebration goes on. A celebration that stops and starts again starts over.
+
+"Celebrated last turn" is the celebration record base-city-happiness-status keeps: `again` is true for a city that
+celebrates now with a celebration recorded before this check. So the hook is only as right as that record:
+
+- with `celebrationSurvivesDisorder: true`, a celebration is kept through disorder, so a city that celebrates again on
+  the first turn order returns counts as celebrating again, and grows that turn;
+- if `cityStatusTurn` runs twice in a turn, a city that started celebrating on the first run counts as celebrating
+  again on the second. The hook grows a city at most once a turn (it remembers the turn each city last grew this way,
+  without saving it), but a celebration that starts and is checked again in the same turn still grows the city a turn
+  early.
 
 The hook runs where the ruleset checks its cities' celebrations. If that comes after the turn's food has gone into the
 store, as it does when the celebrations are checked late in the player's turn, a city can grow from its food store and

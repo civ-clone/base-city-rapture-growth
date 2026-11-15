@@ -1,4 +1,8 @@
 import {
+  Turn,
+  instance as turnInstance,
+} from '@civ-clone/core-turn-based-game/Turn';
+import {
   CityGrowthRegistry,
   instance as cityGrowthRegistryInstance,
 } from '@civ-clone/core-city-growth/CityGrowthRegistry';
@@ -19,6 +23,8 @@ import { reduceYield } from '@civ-clone/core-yield/lib/reduceYields';
 export interface RaptureGrowthDependencies {
   cityGrowthRegistry?: CityGrowthRegistry;
   cityImprovementRegistry?: CityImprovementRegistry;
+  /** The game's turn, for `raptureGrowth`'s once-a-turn guard. */
+  turn?: Turn;
 }
 
 export interface RaptureGrowthOptions {
@@ -117,18 +123,27 @@ export const growByRapture = (
  * Run where the ruleset checks its cities' celebrations, so after the turn's food has gone into the store, and any
  *  growth or starvation from it: a city can grow both ways in one turn. OpenCiv2's `city_process_turn` runs
  *  `city_process_food`, then `city_process_disorder`, for each city.
+ *
+ * "Celebrating again" is `cityStatusTurn`'s: celebrating now, with a celebration recorded before this check. So a city
+ *  grows at most once a turn: the hook remembers the turn each city last grew this way (not saved; a game loaded in the
+ *  middle of a turn forgets it), in case `cityStatusTurn` runs more than once in a turn.
  */
-export const raptureGrowth =
-  (
-    dependencies: RaptureGrowthDependencies,
-    options: RaptureGrowthOptions
-  ): ((check: CityStatusCheck, again: boolean) => void) =>
-  ({ city, yields }: CityStatusCheck, again: boolean): void => {
-    if (!again) {
+export const raptureGrowth = (
+  dependencies: RaptureGrowthDependencies,
+  options: RaptureGrowthOptions
+): ((check: CityStatusCheck, again: boolean) => void) => {
+  const turn = dependencies.turn ?? turnInstance,
+    grewOn = new WeakMap<City, number>();
+
+  return ({ city, yields }: CityStatusCheck, again: boolean): void => {
+    if (!again || grewOn.get(city) === turn.value()) {
       return;
     }
 
-    growByRapture(city, yields, dependencies, options);
+    if (growByRapture(city, yields, dependencies, options)) {
+      grewOn.set(city, turn.value());
+    }
   };
+};
 
 export default raptureGrowth;

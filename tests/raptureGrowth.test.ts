@@ -22,6 +22,7 @@ import Yield from '@civ-clone/core-yield/Yield';
 import cityStatusTurn from '@civ-clone/base-city-happiness-status/lib/statusTurn';
 import { registerCityStatusHandler } from '@civ-clone/base-city-happiness-status/lib/cityStatus';
 import { expect } from 'chai';
+import Turn from '@civ-clone/core-turn-based-game/Turn';
 import setUpCity from '@civ-clone/core-city/tests/lib/setUpCity';
 
 class Food extends Yield {}
@@ -292,6 +293,34 @@ describe('raptureGrowth', (): void => {
     expect(cityGrowth.size()).to.equal(6);
   });
 
+  it('grows a city at most once a turn', async (): Promise<void> => {
+    const { city, cityGrowth, cityGrowthRegistry, cityImprovementRegistry } =
+        await setUp(5),
+      turn = new Turn(),
+      hook = raptureGrowth(
+        { cityGrowthRegistry, cityImprovementRegistry, turn },
+        options()
+      ),
+      check = {
+        city,
+        yields: [new Food(2)],
+        disorder: false,
+        celebrating: true,
+        recordedDisorder: null,
+        recordedCelebration: null,
+      };
+
+    hook(check, true);
+    hook(check, true);
+
+    expect(cityGrowth.size()).to.equal(6);
+
+    turn.increment();
+    hook(check, true);
+
+    expect(cityGrowth.size()).to.equal(7);
+  });
+
   // OpenCiv2 `city_process_disorder`: the first turn a city celebrates only sets `CITYF_CELEBRATING`; from the second
   //  turn running it grows, each turn, until the celebration stops. A celebration that starts again starts over.
   it("as `cityStatusTurn`'s hook, grows a city on each turn it celebrates after the first", async (): Promise<void> => {
@@ -303,7 +332,8 @@ describe('raptureGrowth', (): void => {
         ruleRegistry,
       } = await setUp(5),
       pendingEffects = new PendingEffectRegistry(),
-      engine = new Engine();
+      engine = new Engine(),
+      turn = new Turn();
 
     registerCityStatusHandler(
       'test:disorder',
@@ -333,6 +363,8 @@ describe('raptureGrowth', (): void => {
       (celebrates: boolean): number => {
         celebrating = celebrates;
 
+        turn.increment();
+
         cityStatusTurn([city], {
           disorderHandler: 'test:disorder',
           celebrationHandler: 'test:celebration',
@@ -340,7 +372,7 @@ describe('raptureGrowth', (): void => {
           ruleRegistry,
           engine,
           onCelebrationChecked: raptureGrowth(
-            { cityGrowthRegistry, cityImprovementRegistry },
+            { cityGrowthRegistry, cityImprovementRegistry, turn },
             options()
           ),
         });
