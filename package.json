@@ -1,0 +1,13 @@
+{
+  "name": "@civ-clone/base-city-rapture-growth",
+  "version": "0.0.0",
+  "description": "A city that celebrates for a second turn running grows by one, while the ruleset allows it, it has food to spare and no size cap holds it back.",
+  "repository": "git@github.com:civ-clone/base-city-rapture-growth.git",
+  "keywords": [
+    "typescript",
+    "civilization"
+  ],
+  "author": "dom111 <dom111@users.noreply.github.com>",
+  "license": "MIT",
+  "private": false
+}
